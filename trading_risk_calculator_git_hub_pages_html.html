@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Trading Risk Calculator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#98a0b3; --accent:#7c3aed; --glass: rgba(255,255,255,0.03);
+      --success:#16a34a; --danger:#ef4444; --manual:#0ea5e9;
+    }
+    *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    body{margin:0;background:linear-gradient(180deg,#071028 0%, #081022 60%);color:#e6eef8;min-height:100vh}
+    .container{max-width:1100px;margin:36px auto;padding:20px}
+    header{display:flex;align-items:center;gap:16px}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#2dd4bf);display:flex;align-items:center;justify-content:center;font-weight:700;color:#041025}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:6px 0 18px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1fr 320px;gap:20px;margin-top:18px}
+
+    /* Card */
+    .card{background:var(--card);padding:18px;border-radius:14px;box-shadow:0 6px 30px rgba(2,6,23,0.7)}
+    .menu{display:flex;gap:10px;justify-content:space-between}
+    .btn{background:var(--glass);border:1px solid rgba(255,255,255,0.04);padding:10px 12px;border-radius:10px;color:var(--muted);cursor:pointer}
+    .btn:hover{transform:translateY(-2px)}
+    .primary{background:linear-gradient(90deg,var(--accent),#06b6d4);color:#041025;border:none}
+
+    nav .choices{display:flex;gap:10px;margin-top:14px}
+    .choice{flex:1;padding:14px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);cursor:pointer;border:1px solid rgba(255,255,255,0.03);text-align:center}
+    .choice.active{box-shadow:0 8px 30px rgba(124,58,237,0.12);border-color:rgba(124,58,237,0.5)}
+
+    .calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type="number"], input[type="text"], select{width:100%;padding:10px;border-radius:8px;border:none;background:rgba(255,255,255,0.03);color:inherit}
+    .full{grid-column:1/-1}
+    .results{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .result{padding:12px;border-radius:10px;background:linear-gradient(180deg,rgba(0,0,0,0.18),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.03)}
+    .label{font-size:12px;color:var(--muted)}
+    .value{font-weight:700;font-size:16px;margin-top:6px}
+
+    /* Manual input highlight */
+    .manual{border:2px solid rgba(14,165,233,0.18);box-shadow:inset 0 0 0 1px rgba(14,165,233,0.06)}
+    .manual:focus{outline:none;box-shadow:0 4px 18px rgba(14,165,233,0.12);border-color:var(--manual)}
+
+    .currency-toggle{display:flex;gap:8px;align-items:center}
+    .small{font-size:13px;color:var(--muted)}
+
+    footer{margin-top:20px;color:var(--muted);font-size:13px;text-align:center}
+
+    /* Responsive */
+    @media (max-width:900px){.grid{grid-template-columns:1fr;}.calc-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">TR</div>
+      <div>
+        <h1>Trading Risk Calculator</h1>
+        <p class="lead">Three calculators in one — Crypto, Indonesian Stocks (IDX) and US Stocks. All content in English. Choose display currency and follow the blue-highlighted fields (manual inputs).</p>
+      </div>
+    </header>
+
+    <div class="grid">
+      <main>
+        <div class="card">
+          <nav>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <strong>Choose calculator</strong>
+              <div style="font-size:13px;color:var(--muted)">Client-side · No external APIs</div>
+            </div>
+
+            <div class="choices" style="margin-top:12px">
+              <div class="choice active" data-target="crypto">Crypto</div>
+              <div class="choice" data-target="idx">Indonesia (IDX)</div>
+              <div class="choice" data-target="us">US Stocks</div>
+            </div>
+          </nav>
+
+          <!-- Calculator Views (SPA-like) -->
+          <section id="views" style="margin-top:14px">
+
+            <!-- Crypto -->
+            <div class="view" id="crypto" style="display:block">
+              <div style="display:flex;gap:12px;align-items:center;justify-content:space-between">
+                <div><strong>Crypto Calculator</strong><div class="small">Supports fractional quantities</div></div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <div class="small">Currency:</div>
+                  <select id="c_currency" class="manual" title="Display currency">
+                    <option value="USD">USD</option>
+                    <option value="IDR">IDR</option>
+                  </select>
+                  <button class="btn" onclick="resetForm('crypto')">Reset</button>
+                </div>
+              </div>
+
+              <div class="small" style="margin-top:8px;color:var(--muted)">Fields with blue border must be entered manually. Other values are calculated automatically.</div>
+
+              <div class="calc-grid" style="margin-top:12px">
+                <div>
+                  <label>Trading capital (manual)</label>
+                  <input id="c_capital" class="manual" type="number" step="any" placeholder="Enter total trading capital (e.g. 300)" value="300">
+                </div>
+                <div>
+                  <label>Max risk per trade (decimal, manual, e.g. 0.03 = 3%)</label>
+                  <input id="c_maxrisk" class="manual" type="number" step="any" placeholder="Enter max risk per trade (e.g. 0.03)" value="0.03">
+                </div>
+
+                <div>
+                  <label>Buying capital (amount allocated — manual)</label>
+                  <input id="c_buycap" class="manual" type="number" step="any" placeholder="Enter buying allocation (e.g. 43.44)" value="43.44">
+                </div>
+                <div>
+                  <label>Buy price (manual)</label>
+                  <input id="c_buyprice" class="manual" type="number" step="any" placeholder="Enter buy price (e.g. 2172)" value="2172">
+                </div>
+
+                <div>
+                  <label>Quantity (calculated from buying capital / buy price — editable)</label>
+                  <input id="c_qty" type="number" step="any" placeholder="Auto: buying capital / buy price" value="0.02">
+                </div>
+                <div>
+                  <label>Target Sell price (manual)</label>
+                  <input id="c_sellprice" class="manual" type="number" step="any" placeholder="Enter target sell price" value="3916">
+                </div>
+
+                <div>
+                  <label>Stop loss price (manual)</label>
+                  <input id="c_stopprice" class="manual" type="number" step="any" placeholder="Enter stop loss price" value="1608">
+                </div>
+                <div>
+                  <label></label>
+                  <div style="font-size:12px;color:var(--muted);padding:10px;background:rgba(255,255,255,0.02);border-radius:8px">Quantity = Buying capital / Buy price (auto). You can override quantity manually.</div>
+                </div>
+
+                <div class="full">
+                  <button class="btn primary" style="width:100%" onclick="compute('crypto')">Compute</button>
+                </div>
+              </div>
+
+              <div class="results" id="c_results">
+                <div class="result">
+                  <div class="label">Gross buy (allocated)</div>
+                  <div class="value" id="c_gross_buy">-</div>
+                </div>
+                <div class="result">
+                  <div class="label">Gross sell (target)</div>
+                  <div class="value" id="c_gross_sell">-</div>
+                </div>
+                <div class="result">
+                  <div class="label">Profit amount</div>
+                  <div class="value" id="c_profit">-</div>
+                </div>
+                <div class="result">
+                  <div class="label">Gain of trade (profit / trading capital)</div>
+                  <div class="value" id="c_gain">-</div>
+                </div>
+                <div class="result">
+                  <div class="label">Stop loss value (gross)</div>
+                  <div class="value" id="c_gross_stop">-</div>
+                </div>
+                <div class="result">
+                  <div class="label">Loss amount (gross_stop - gross_buy)</div>
+                  <div class="value" id="c_loss">-</div>
+                </div>
+                <div class="result">
+                  <div class="label">Risk of trade (loss / trading capital)</div>
+                  <div class="value" id="c_risk">-</div>
+                </div>
+                <div class="result">
+                  <div class="label">Stop loss pips (buy price - stop loss)</div>
+                  <div class="value" id="c_slpips">-</div>
+                </div>
+                <div class="result">
+                  <div class="label">Risk / Reward (profit / loss)</div>
+                  <div class="value" id="c_rr">-</div>
+                </div>
+                <div class="result">
+                  <div class="label">Recommended: allowed loss (capital × max risk)</div>
+                  <div class="value" id="c_allowed">-</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- IDX -->
+            <div class="view" id="idx" style="display:none">
+              <div style="display:flex;gap:12px;align-items:center;justify-content:space-between">
+                <div><strong>Indonesia Stock (IDX)</strong><div class="small">Quantity is rounded down to integer shares</div></div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <div class="small">Currency:</div>
+                  <select id="i_currency" class="manual" title="Display currency">
+                    <option value="IDR">IDR</option>
+                    <option value="USD">USD</option>
+                  </select>
+                  <button class="btn" onclick="resetForm('idx')">Reset</button>
+                </div>
+              </div>
+
+              <div class="small" style="margin-top:8px;color:var(--muted)">Fields with blue border must be entered manually. Other values are calculated automatically.</div>
+
+              <div class="calc-grid">
+                <div>
+                  <label>Trading capital (manual)</label>
+                  <input id="i_capital" class="manual" type="number" step="any" placeholder="Enter total trading capital (e.g. 4800000)" value="4800000">
+                </div>
+                <div>
+                  <label>Max risk per trade (decimal, manual)</label>
+                  <input id="i_maxrisk" class="manual" type="number" step="any" placeholder="Enter max risk per trade (e.g. 0.03)" value="0.03">
+                </div>
+
+                <div>
+                  <label>Buying capital (amount allocated — manual)</label>
+                  <input id="i_buycap" class="manual" type="number" step="any" placeholder="Enter buying allocation (e.g. 867000)" value="867000">
+                </div>
+                <div>
+                  <label>Buy price (manual)</label>
+                  <input id="i_buyprice" class="manual" type="number" step="any" placeholder="Enter buy price (e.g. 2890)" value="2890">
+                </div>
+
+                <div>
+                  <label>Quantity (calculated, floored to integer — editable)</label>
+                  <input id="i_qty" type="number" step="1" placeholder="Auto: floor(buying capital / buy price)" value="3">
+                </div>
+                <div>
+                  <label>Target Sell price (manual)</label>
+                  <input id="i_sellprice" class="manual" type="number" step="any" placeholder="Enter target sell price (e.g. 367000)" value="367000">
+                </div>
+
+                <div>
+                  <label>Stop loss price (manual)</label>
+                  <input id="i_stopprice" class="manual" type="number" step="any" placeholder="Enter stop loss price (e.g. 2350)" value="2350">
+                </div>
+
+                <div class="full">
+                  <button class="btn primary" style="width:100%" onclick="compute('idx')">Compute</button>
+                </div>
+              </div>
+
+              <div class="results" id="i_results">
+                <div class="result"><div class="label">Gross buy (allocated)</div><div class="value" id="i_gross_buy">-</div></div>
+                <div class="result"><div class="label">Gross sell (target)</div><div class="value" id="i_gross_sell">-</div></div>
+                <div class="result"><div class="label">Profit amount</div><div class="value" id="i_profit">-</div></div>
+                <div class="result"><div class="label">Gain of trade</div><div class="value" id="i_gain">-</div></div>
+                <div class="result"><div class="label">Stop loss value (gross)</div><div class="value" id="i_gross_stop">-</div></div>
+                <div class="result"><div class="label">Loss amount</div><div class="value" id="i_loss">-</div></div>
+                <div class="result"><div class="label">Risk of trade</div><div class="value" id="i_risk">-</div></div>
+                <div class="result"><div class="label">Stop loss pips</div><div class="value" id="i_slpips">-</div></div>
+                <div class="result"><div class="label">Net Profit (if profit)</div><div class="value" id="i_netprofit">-</div></div>
+                <div class="result"><div class="label">Net Loss (if stop hit)</div><div class="value" id="i_netloss">-</div></div>
+              </div>
+            </div>
+
+            <!-- US Stocks -->
+            <div class="view" id="us" style="display:none">
+              <div style="display:flex;gap:12px;align-items:center;justify-content:space-between">
+                <div><strong>US Stocks Calculator</strong><div class="small">Quantity rounded down to integer shares</div></div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <div class="small">Currency:</div>
+                  <select id="u_currency" class="manual" title="Display currency">
+                    <option value="USD">USD</option>
+                    <option value="IDR">IDR</option>
+                  </select>
+                  <button class="btn" onclick="resetForm('us')">Reset</button>
+                </div>
+              </div>
+
+              <div class="small" style="margin-top:8px;color:var(--muted)">Fields with blue border must be entered manually. Other values are calculated automatically.</div>
+
+              <div class="calc-grid">
+                <div>
+                  <label>Trading capital (manual)</label>
+                  <input id="u_capital" class="manual" type="number" step="any" placeholder="Enter total trading capital (e.g. 300)" value="300">
+                </div>
+                <div>
+                  <label>Max risk per trade (decimal, manual)</label>
+                  <input id="u_maxrisk" class="manual" type="number" step="any" placeholder="Enter max risk per trade (e.g. 0.03)" value="0.03">
+                </div>
+
+                <div>
+                  <label>Buying capital (amount allocated — manual)</label>
+                  <input id="u_buycap" class="manual" type="number" step="any" placeholder="Enter buying allocation (e.g. 417.69)" value="417.69">
+                </div>
+                <div>
+                  <label>Buy price (manual)</label>
+                  <input id="u_buyprice" class="manual" type="number" step="any" placeholder="Enter buy price" value="">
+                </div>
+
+                <div>
+                  <label>Quantity (calculated, floored to integer — editable)</label>
+                  <input id="u_qty" type="number" step="1" placeholder="Auto: floor(buying capital / buy price)" value="1">
+                </div>
+                <div>
+                  <label>Target Sell price (manual)</label>
+                  <input id="u_sellprice" class="manual" type="number" step="any" placeholder="Enter target sell price" value="">
+                </div>
+
+                <div>
+                  <label>Stop loss price (manual)</label>
+                  <input id="u_stopprice" class="manual" type="number" step="any" placeholder="Enter stop loss price" value="">
+                </div>
+
+                <div class="full">
+                  <button class="btn primary" style="width:100%" onclick="compute('us')">Compute</button>
+                </div>
+              </div>
+
+              <div class="results" id="u_results">
+                <div class="result"><div class="label">Gross buy (allocated)</div><div class="value" id="u_gross_buy">-</div></div>
+                <div class="result"><div class="label">Gross sell (target)</div><div class="value" id="u_gross_sell">-</div></div>
+                <div class="result"><div class="label">Profit amount</div><div class="value" id="u_profit">-</div></div>
+                <div class="result"><div class="label">Gain of trade</div><div class="value" id="u_gain">-</div></div>
+                <div class="result"><div class="label">Stop loss value (gross)</div><div class="value" id="u_gross_stop">-</div></div>
+                <div class="result"><div class="label">Loss amount</div><div class="value" id="u_loss">-</div></div>
+                <div class="result"><div class="label">Risk of trade</div><div class="value" id="u_risk">-</div></div>
+                <div class="result"><div class="label">Stop loss pips</div><div class="value" id="u_slpips">-</div></div>
+              </div>
+            </div>
+
+          </section>
+        </div>
+
+      </main>
+
+      <aside>
+        <div class="card">
+          <h3 style="margin-top:0">How this calculator works</h3>
+          <p style="color:var(--muted)">All formulas follow the original Excel layout you provided. Key formulas used:</p>
+          <ul style="color:var(--muted);font-size:13px">
+            <li>Quantity = Buying capital / Buy price (fractional for crypto)</li>
+            <li>Gross buy = Buy price × Quantity</li>
+            <li>Gross sell = Sell price × Quantity</li>
+            <li>Profit amount = Gross sell − Gross buy</li>
+            <li>Gross stop = Stop price × Quantity</li>
+            <li>Loss amount = Gross stop − Gross buy</li>
+            <li>Gain = Profit amount ÷ Trading capital</li>
+            <li>Risk = Loss amount ÷ Trading capital</li>
+            <li>Stop-loss pips = Buy price − Stop price</li>
+            <li>Risk/Reward = Profit amount ÷ Loss amount</li>
+          </ul>
+
+          <hr style="border:none;border-top:1px solid rgba(255,255,255,0.04);margin:12px 0">
+          <div style="font-size:13px;color:var(--muted)">Notes:</div>
+          <ol style="color:var(--muted);font-size:13px">
+            <li>For stock calculators, quantity is floored to integer shares.</li>
+            <li>All values are displayed in the selected currency (no FX conversion between USD/IDR).</li>
+            <li>This is a client-side static site — ready to be uploaded to GitHub Pages.</li>
+          </ol>
+        </div>
+
+        <div style="height:12px"></div>
+        <div class="card">
+          <strong>Export & Deploy</strong>
+          <p style="color:var(--muted);font-size:13px">To publish: create a GitHub repository, add this file as <code>index.html</code>, push and enable GitHub Pages from repo settings (branch: main / gh-pages).</p>
+          <button class="btn" onclick="downloadHTML()">Download HTML file</button>
+        </div>
+      </aside>
+    </div>
+
+    <footer>
+      Built from your Excel base — formulas mirrored. Want extra features (fees, slippage, presets)? Tell me and I'll update the code.
+    </footer>
+  </div>
+
+<script>
+  // Navigation
+  document.querySelectorAll('.choice').forEach(el=>el.addEventListener('click',()=>{
+    document.querySelectorAll('.choice').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active');
+    const t = el.dataset.target;
+    document.querySelectorAll('.view').forEach(v=>v.style.display='none');
+    document.getElementById(t).style.display='block';
+  }));
+
+  // Format helper that respects selected currency
+  function formatNumber(value, currency){
+    if (typeof value !== 'number' || !isFinite(value)) return '-';
+    // If value is less than 1 and not integer, show up to 6 decimals (use plain number)
+    if (Math.abs(value) < 1 && Math.abs(value) % 1 !== 0) return Number(value.toFixed(6)).toString();
+    try{
+      if(currency==='USD') return value.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:2});
+      if(currency==='IDR') return value.toLocaleString('id-ID', {style:'currency', currency:'IDR', maximumFractionDigits:0});
+    } catch(e){
+      return value.toString();
+    }
+    return value.toString();
+  }
+
+  function fmt(x){
+    if (typeof x !== 'number' || !isFinite(x)) return '-';
+    // small fractions display
+    if (Math.abs(x) < 1 && Math.abs(x) % 1 !== 0) return Number(x.toFixed(6)).toString();
+    if (Math.abs(x) % 1 !== 0) return Number(x.toFixed(6)).toString();
+    return x.toLocaleString();
+  }
+
+  function resetForm(type){
+    if(type==='crypto'){document.getElementById('c_currency').value='USD';document.getElementById('c_capital').value=300;document.getElementById('c_maxrisk').value=0.03;document.getElementById('c_buycap').value=43.44;document.getElementById('c_buyprice').value=2172;document.getElementById('c_qty').value=0.02;document.getElementById('c_sellprice').value=3916;document.getElementById('c_stopprice').value=1608;clearResults('c_');}
+    if(type==='idx'){document.getElementById('i_currency').value='IDR';document.getElementById('i_capital').value=4800000;document.getElementById('i_maxrisk').value=0.03;document.getElementById('i_buycap').value=867000;document.getElementById('i_buyprice').value=2890;document.getElementById('i_qty').value=3;document.getElementById('i_sellprice').value=367000;document.getElementById('i_stopprice').value=2350;clearResults('i_');}
+    if(type==='us'){document.getElementById('u_currency').value='USD';document.getElementById('u_capital').value=300;document.getElementById('u_maxrisk').value=0.03;document.getElementById('u_buycap').value=417.69;document.getElementById('u_buyprice').value='';document.getElementById('u_qty').value=1;document.getElementById('u_sellprice').value='';document.getElementById('u_stopprice').value='';clearResults('u_');}
+  }
+
+  function clearResults(prefix){
+    document.querySelectorAll('[id^="'+prefix+'"]').forEach(el=>{ if(el.id.endsWith('gross_buy')||el.id.endsWith('gross_sell')||el.id.endsWith('profit')||el.id.endsWith('gain')||el.id.endsWith('gross_stop')||el.id.endsWith('loss')||el.id.endsWith('risk')||el.id.endsWith('slpips')||el.id.endsWith('rr')||el.id.endsWith('allowed')||el.id.endsWith('netprofit')||el.id.endsWith('netloss')){el.textContent='-';}})
+  }
+
+  // Keep buying capital/quantity in sync (Crypto fractional)
+  document.getElementById('c_buycap').addEventListener('input',()=>{
+    const bcap=Number(document.getElementById('c_buycap').value||0);
+    const bp=Number(document.getElementById('c_buyprice').value||0);
+    if(bp>0) document.getElementById('c_qty').value=(bcap/bp);
+  });
+  document.getElementById('c_buyprice').addEventListener('input',()=>{
+    const bcap=Number(document.getElementById('c_buycap').value||0);
+    const bp=Number(document.getElementById('c_buyprice').value||0);
+    if(bp>0) document.getElementById('c_qty').value=(bcap/bp);
+  });
+
+  document.getElementById('i_buycap').addEventListener('input',()=>{
+    const bcap=Number(document.getElementById('i_buycap').value||0);
+    const bp=Number(document.getElementById('i_buyprice').value||0);
+    if(bp>0) document.getElementById('i_qty').value=Math.floor(bcap/bp);
+  });
+  document.getElementById('i_buyprice').addEventListener('input',()=>{
+    const bcap=Number(document.getElementById('i_buycap').value||0);
+    const bp=Number(document.getElementById('i_buyprice').value||0);
+    if(bp>0) document.getElementById('i_qty').value=Math.floor(bcap/bp);
+  });
+
+  document.getElementById('u_buycap').addEventListener('input',()=>{
+    const bcap=Number(document.getElementById('u_buycap').value||0);
+    const bp=Number(document.getElementById('u_buyprice').value||0);
+    if(bp>0) document.getElementById('u_qty').value=Math.floor(bcap/bp);
+  });
+
+  function compute(type){
+    if(type==='crypto'){
+      const currency = document.getElementById('c_currency').value;
+      const capital=Number(document.getElementById('c_capital').value||0);
+      const maxrisk=Number(document.getElementById('c_maxrisk').value||0);
+      const buycap=Number(document.getElementById('c_buycap').value||0);
+      const buy=Number(document.getElementById('c_buyprice').value||0);
+      const qty=Number(document.getElementById('c_qty').value||0);
+      const sell=Number(document.getElementById('c_sellprice').value||0);
+      const stop=Number(document.getElementById('c_stopprice').value||0);
+
+      const gross_buy = buy * qty;
+      const gross_sell = sell * qty;
+      const profit = gross_sell - gross_buy;
+      const gain = capital? profit / capital : NaN;
+      const gross_stop = stop * qty;
+      const loss = gross_stop - gross_buy;
+      const risk = capital? loss / capital : NaN;
+      const slpips = buy - stop;
+      const rr = loss!==0? profit / loss : NaN;
+      const allowed = capital * maxrisk;
+
+      document.getElementById('c_gross_buy').textContent = formatNumber(gross_buy, currency);
+      document.getElementById('c_gross_sell').textContent = formatNumber(gross_sell, currency);
+      document.getElementById('c_profit').textContent = formatNumber(profit, currency);
+      document.getElementById('c_gain').textContent = fmt(gain);
+      document.getElementById('c_gross_stop').textContent = formatNumber(gross_stop, currency);
+      document.getElementById('c_loss').textContent = formatNumber(loss, currency);
+      document.getElementById('c_risk').textContent = fmt(risk);
+      document.getElementById('c_slpips').textContent = fmt(slpips);
+      document.getElementById('c_rr').textContent = fmt(rr);
+      document.getElementById('c_allowed').textContent = formatNumber(allowed, currency);
+    }
+
+    if(type==='idx'){
+      const currency = document.getElementById('i_currency').value;
+      const capital=Number(document.getElementById('i_capital').value||0);
+      const maxrisk=Number(document.getElementById('i_maxrisk').value||0);
+      const buycap=Number(document.getElementById('i_buycap').value||0);
+      const buy=Number(document.getElementById('i_buyprice').value||0);
+      let qty=Math.floor(Number(document.getElementById('i_qty').value||0));
+      const sell=Number(document.getElementById('i_sellprice').value||0);
+      const stop=Number(document.getElementById('i_stopprice').value||0);
+
+      if(qty<=0 && buy>0) qty = Math.floor(buycap / buy);
+
+      const gross_buy = buy * qty;
+      const gross_sell = sell * qty;
+      const profit = gross_sell - gross_buy;
+      const gain = capital? profit / capital : NaN;
+      const gross_stop = stop * qty;
+      const loss = gross_stop - gross_buy;
+      const risk = capital? loss / capital : NaN;
+      const slpips = buy - stop;
+
+      document.getElementById('i_gross_buy').textContent = formatNumber(gross_buy, currency);
+      document.getElementById('i_gross_sell').textContent = formatNumber(gross_sell, currency);
+      document.getElementById('i_profit').textContent = formatNumber(profit, currency);
+      document.getElementById('i_gain').textContent = fmt(gain);
+      document.getElementById('i_gross_stop').textContent = formatNumber(gross_stop, currency);
+      document.getElementById('i_loss').textContent = formatNumber(loss, currency);
+      document.getElementById('i_risk').textContent = fmt(risk);
+      document.getElementById('i_slpips').textContent = fmt(slpips);
+      document.getElementById('i_netprofit').textContent = profit>0?formatNumber(profit,currency):'-';
+      document.getElementById('i_netloss').textContent = loss<0?formatNumber(loss,currency):formatNumber(loss,currency);
+    }
+
+    if(type==='us'){
+      const currency = document.getElementById('u_currency').value;
+      const capital=Number(document.getElementById('u_capital').value||0);
+      const maxrisk=Number(document.getElementById('u_maxrisk').value||0);
+      const buycap=Number(document.getElementById('u_buycap').value||0);
+      const buy=Number(document.getElementById('u_buyprice').value||0);
+      let qty=Math.floor(Number(document.getElementById('u_qty').value||0));
+      const sell=Number(document.getElementById('u_sellprice').value||0);
+      const stop=Number(document.getElementById('u_stopprice').value||0);
+
+      if(qty<=0 && buy>0) qty = Math.floor(buycap / buy);
+
+      const gross_buy = buy * qty;
+      const gross_sell = sell * qty;
+      const profit = gross_sell - gross_buy;
+      const gain = capital? profit / capital : NaN;
+      const gross_stop = stop * qty;
+      const loss = gross_stop - gross_buy;
+      const risk = capital? loss / capital : NaN;
+      const slpips = buy - stop;
+
+      document.getElementById('u_gross_buy').textContent = formatNumber(gross_buy, currency);
+      document.getElementById('u_gross_sell').textContent = formatNumber(gross_sell, currency);
+      document.getElementById('u_profit').textContent = formatNumber(profit, currency);
+      document.getElementById('u_gain').textContent = fmt(gain);
+      document.getElementById('u_gross_stop').textContent = formatNumber(gross_stop, currency);
+      document.getElementById('u_loss').textContent = formatNumber(loss, currency);
+      document.getElementById('u_risk').textContent = fmt(risk);
+      document.getElementById('u_slpips').textContent = fmt(slpips);
+    }
+  }
+
+  // Download HTML file
+  function downloadHTML(){
+    const html = '<!doctype html>
+' + document.documentElement.outerHTML;
+    const blob = new Blob([html], {type: 'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'index.html'; a.click();
+    URL.revokeObjectURL(url);
+  }
+</script>
+</body>
+</html>
