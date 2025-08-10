@@ -84,7 +84,7 @@
             <!-- Crypto -->
             <div class="view" id="crypto" style="display:block">
               <div style="display:flex;gap:12px;align-items:center;justify-content:space-between">
-                <div><strong>Crypto Calculator</strong><div class="small">Supports fractional quantities</div></div>
+                <div><strong>Crypto Calculator</strong><div class="small"></div></div>
                 <div style="display:flex;gap:8px;align-items:center">
                   <div class="small">Currency:</div>
                   <select id="c_currency" class="manual" title="Display currency">
@@ -103,7 +103,7 @@
                   <input id="c_capital" class="manual" type="number" step="any" placeholder="Enter total trading capital" value="">
                 </div>
                 <div>
-                  <label>Max risk per trade (decimal, manual, e.g. 0.03 = 3%)</label>
+                  <label>Max risk per trade (decimal, manual)</label>
                   <input id="c_maxrisk" class="manual" type="number" step="any" placeholder="Enter max risk per trade (max. 1)" value="">
                 </div>
 
@@ -117,7 +117,7 @@
                 </div>
 
                 <div>
-                  <label>Quantity (calculated from buying capital / buy price — editable)</label>
+                  <label>Quantity (calculated, floored to integer — editable)</label>
                   <input id="c_qty" type="number" step="any" placeholder="Auto: buying capital / buy price" value="">
                 </div>
                 <div>
@@ -186,7 +186,7 @@
             <!-- IDX -->
             <div class="view" id="idx" style="display:none">
               <div style="display:flex;gap:12px;align-items:center;justify-content:space-between">
-                <div><strong>Indonesia Stock (IDX)</strong><div class="small">Quantity is rounded down to integer shares</div></div>
+                <div><strong>Indonesia Stock (IDX)</strong><div class="small"></div></div>
                 <div style="display:flex;gap:8px;align-items:center">
                   <div class="small">Currency:</div>
                   <select id="i_currency" class="manual" title="Display currency">
@@ -206,7 +206,7 @@
                 </div>
                 <div>
                   <label>Max risk per trade (decimal, manual)</label>
-                  <input id="i_maxrisk" class="manual" type="number" step="any" placeholder="Enter max risk per trade" value="">
+                  <input id="i_maxrisk" class="manual" type="number" step="any" placeholder="Enter max risk per trade (max. 1)" value="">
                 </div>
 
                 <div>
@@ -254,7 +254,7 @@
             <!-- US Stocks -->
             <div class="view" id="us" style="display:none">
               <div style="display:flex;gap:12px;align-items:center;justify-content:space-between">
-                <div><strong>US Stocks Calculator</strong><div class="small">Quantity rounded down to integer shares</div></div>
+                <div><strong>US Stocks Calculator</strong><div class="small"></div></div>
                 <div style="display:flex;gap:8px;align-items:center">
                   <div class="small">Currency:</div>
                   <select id="u_currency" class="manual" title="Display currency">
@@ -274,7 +274,7 @@
                 </div>
                 <div>
                   <label>Max risk per trade (decimal, manual)</label>
-                  <input id="u_maxrisk" class="manual" type="number" step="any" placeholder="Enter max risk per trade" value="">
+                  <input id="u_maxrisk" class="manual" type="number" step="any" placeholder="Enter max risk per trade (max. 1)" value="">
                 </div>
 
                 <div>
